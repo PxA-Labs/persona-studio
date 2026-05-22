@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
+import { HfInference } from '@huggingface/inference';
 
 export async function POST(request) {
   try {
@@ -19,32 +19,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'API Key Missing' }, { status: 500 });
     }
 
-    let hfResponse;
+    const hf = new HfInference(apiKey);
+
+    let imageBlob;
     try {
-      hfResponse = await axios.post(
-        "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
-        {
-          inputs: prompt || 'beautiful 8k portrait',
-          parameters: { negative_prompt: negativePrompt || 'ugly' },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          responseType: 'arraybuffer',
-        }
-      );
+      imageBlob = await hf.textToImage({
+        model: 'black-forest-labs/FLUX.1-schnell',
+        inputs: prompt || 'beautiful 8k portrait',
+        parameters: { negative_prompt: negativePrompt || 'ugly' }
+      });
     } catch (e) {
-      if (e.response) {
-        // Hugging Face rejected it (e.g., loading, invalid token, etc.)
-        const errorString = e.response.data ? e.response.data.toString() : e.message;
-        return NextResponse.json({ error: 'Hugging Face API Rejected Request', details: errorString }, { status: e.response.status });
-      }
-      return NextResponse.json({ error: 'Axios Network Error', details: e.message }, { status: 500 });
+      return NextResponse.json({ error: 'Hugging Face API Rejected Request', details: String(e) }, { status: 500 });
     }
 
-    return new NextResponse(hfResponse.data, {
+    const imageBuffer = await imageBlob.arrayBuffer();
+
+    return new NextResponse(imageBuffer, {
       status: 200,
       headers: { 'Content-Type': 'image/jpeg' },
     });
