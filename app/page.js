@@ -5,6 +5,7 @@ import { useState } from 'react';
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('ugly, bad anatomy, deformed, blurry');
+  const [seed, setSeed] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState(null);
 
@@ -15,10 +16,13 @@ export default function Home() {
     
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://purvansh01-persona-studio.hf.space';
+      const bodyPayload = { prompt, negativePrompt };
+      if (seed) bodyPayload.seed = parseInt(seed, 10);
+      
       const response = await fetch(`${backendUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, negativePrompt })
+        body: JSON.stringify(bodyPayload)
       });
 
       if (!response.ok) {
@@ -97,6 +101,20 @@ export default function Home() {
                   value={negativePrompt}
                   onChange={(e) => setNegativePrompt(e.target.value)}
                 />
+              </div>
+
+              <div style={{ marginBottom: '32px' }}>
+                <label className="input-label">Character Lock (Seed)</label>
+                <input 
+                  type="number"
+                  className="input-field" 
+                  placeholder="e.g., 42 (Leave blank for random)"
+                  value={seed}
+                  onChange={(e) => setSeed(e.target.value)}
+                />
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                  Pro Tip: Type a random number. As long as you use the same number and base prompt, the AI will generate the exact same person's face!
+                </p>
               </div>
 
               <button type="submit" className="btn-primary" disabled={isGenerating}>

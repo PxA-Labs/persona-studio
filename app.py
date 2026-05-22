@@ -27,6 +27,7 @@ hf_client = InferenceClient(token=hf_token)
 class GenerateRequest(BaseModel):
     prompt: str
     negative_prompt: str = ""
+    seed: int = None
 
 @app.get("/")
 def read_root():
@@ -35,10 +36,16 @@ def read_root():
 @app.post("/api/generate")
 async def generate_image(req: GenerateRequest):
     try:
+        parameters = {}
+        if req.negative_prompt:
+            parameters["negative_prompt"] = req.negative_prompt
+        if req.seed is not None:
+            parameters["seed"] = req.seed
+            
         image = hf_client.text_to_image(
             req.prompt,
             model="black-forest-labs/FLUX.1-schnell",
-            negative_prompt=req.negative_prompt
+            parameters=parameters
         )
         
         # Convert PIL Image to bytes
