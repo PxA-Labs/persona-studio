@@ -14,37 +14,18 @@ export default function Home() {
     setGeneratedImage(null);
     
     try {
-      // Bypassing Vercel's backend limits by calling Hugging Face directly from the browser
-      const apiKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY;
-      
-      if (!apiKey) {
-        alert('Error: You must rename your Vercel Environment Variable to NEXT_PUBLIC_HUGGING_FACE_API_KEY');
-        setIsGenerating(false);
-        return;
-      }
-
-      const response = await fetch(
-        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: { negative_prompt: negativePrompt }
-          }),
-        }
-      );
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, negativePrompt })
+      });
 
       if (!response.ok) {
-        const errText = await response.text();
-        alert(`Hugging Face Error: ${errText}\n\n(If it says the model is loading, just try again in 10 seconds!)`);
+        const errorData = await response.json();
+        alert(`Server Error: ${errorData.error}\n\nDetails: ${errorData.details || ''}`);
       } else {
-        const imageBlob = await response.blob();
-        const imageUrl = URL.createObjectURL(imageBlob);
-        setGeneratedImage(imageUrl);
+        const data = await response.json();
+        setGeneratedImage(data.imageUrl);
       }
     } catch (err) {
       alert(`Client Error: ${err.message}`);

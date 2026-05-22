@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { Buffer } from 'buffer';
 
+export const maxDuration = 60; // Allow Vercel up to 60 seconds instead of the default 10 seconds!
+
 export async function POST(request) {
   try {
     const { prompt, negativePrompt } = await request.json();
 
-    const apiKey = process.env.HUGGING_FACE_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY;
     
     if (!apiKey || apiKey === 'your_api_key_here') {
       return NextResponse.json(
