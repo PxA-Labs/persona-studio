@@ -40,6 +40,10 @@ def read_root():
 @app.post("/api/generate")
 async def generate_image(req: GenerateRequest):
     try:
+        # Secretly enhance prompts for extreme photorealism
+        enhanced_prompt = f"RAW photo, highly detailed, photorealistic, 8k resolution, ultra-realistic, DSLR, cinematic lighting, masterpiece. {req.prompt}"
+        enhanced_negative = f"cartoon, 3d render, anime, illustration, painting, low quality, worst quality, deformed, ugly, blurry, {req.negative_prompt}"
+
         # Branch 1: Face Swap using InstantID (Gradio API Hack)
         if req.face_image_base64:
             base64_data = req.face_image_base64
@@ -55,8 +59,8 @@ async def generate_image(req: GenerateRequest):
             result = gradio_client.predict(
                 face_image_path=handle_file(tmp_path),
                 pose_image_path=None,
-                prompt=req.prompt,
-                negative_prompt=req.negative_prompt,
+                prompt=enhanced_prompt,
+                negative_prompt=enhanced_negative,
                 style_name="(No style)",
                 num_steps=30,
                 identitynet_strength_ratio=0.8,
@@ -87,13 +91,12 @@ async def generate_image(req: GenerateRequest):
 
         # Branch 2: Blazing Fast Text-to-Image (FLUX.1-schnell)
         parameters = {}
-        if req.negative_prompt:
-            parameters["negative_prompt"] = req.negative_prompt
+        parameters["negative_prompt"] = enhanced_negative
         if req.seed is not None:
             parameters["seed"] = req.seed
             
         image = hf_client.text_to_image(
-            req.prompt,
+            enhanced_prompt,
             model="black-forest-labs/FLUX.1-schnell",
             parameters=parameters
         )
