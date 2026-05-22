@@ -4,49 +4,59 @@ export const runtime = 'edge';
 
 export async function POST(request) {
   try {
-    const { prompt, negativePrompt } = await request.json();
+    let reqBody;
+    try {
+      reqBody = await request.json();
+    } catch (e) {
+      return NextResponse.json({ error: 'JSON Parse Error', details: e.message }, { status: 400 });
+    }
+
+    const { prompt, negativePrompt } = reqBody;
 
     const apiKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY;
-    
-    if (!apiKey || apiKey === 'your_api_key_here') {
-      return NextResponse.json(
-        { error: 'Hugging Face API Key is missing in Vercel Environment Variables.' },
-        { status: 500 }
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API Key Missing' }, { status: 500 });
+    }
+
+    let hfResponse;
+    try {
+      hfResponse = await fetch(
+        "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+          body: JSON.stringify({
+            inputs: prompt || 'beautiful 8k portrait',
+            parameters: { negative_prompt: negativePrompt || 'ugly' },
+          }),
+        }
       );
+    } catch (e) {
+      return NextResponse.json({ error: 'Hugging Face Network Error', details: e.message }, { status: 500 });
     }
 
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            negative_prompt: negativePrompt,
-          }
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      return NextResponse.json({ error: 'Failed to generate image from Hugging Face', details: errorData }, { status: response.status });
+    if (!hfResponse.ok) {
+      const errorData = await hfResponse.text();
+      return NextResponse.json({ error: 'Hugging Face API Rejected Request', details: errorData }, { status: hfResponse.status });
     }
 
-    const imageBlob = await response.blob();
-    return new NextResponse(imageBlob, {
+    let imageBuffer;
+    try {
+      const imageBlob = await hfResponse.blob();
+      imageBuffer = await imageBlob.arrayBuffer();
+    } catch (e) {
+      return NextResponse.json({ error: 'Blob Processing Error', details: e.message }, { status: 500 });
+    }
+
+    return new NextResponse(imageBuffer, {
       status: 200,
-      headers: {
-        'Content-Type': 'image/jpeg',
-      },
+      headers: { 'Content-Type': 'image/jpeg' },
     });
     
   } catch (error) {
-    console.error('Generation error:', error);
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'CRITICAL_CRASH', details: error.message || String(error) }, { status: 500 });
   }
 }
