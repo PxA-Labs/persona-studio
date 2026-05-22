@@ -11,9 +11,9 @@ export async function POST(request) {
 
     const { prompt, negativePrompt } = reqBody;
 
-    // Trimming the key prevents "fetch failed" errors caused by accidental spaces when copying/pasting
-    const rawKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY;
-    const apiKey = (rawKey || '').trim();
+    // Aggressively strip ALL invisible characters, newlines, and zero-width spaces that users accidentally copy/paste
+    const rawKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY || '';
+    const apiKey = rawKey.replace(/[^a-zA-Z0-9_-]/g, '');
     
     if (!apiKey) {
       return NextResponse.json({ error: 'API Key Missing' }, { status: 500 });
