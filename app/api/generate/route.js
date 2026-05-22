@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import axios from 'axios';
 
 export async function POST(request) {
   try {
@@ -11,7 +12,6 @@ export async function POST(request) {
 
     const { prompt, negativePrompt } = reqBody;
 
-    // Aggressively strip ALL invisible characters, newlines, and zero-width spaces that users accidentally copy/paste
     const rawKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY || '';
     const apiKey = rawKey.replace(/[^a-zA-Z0-9_-]/g, '');
     
@@ -21,38 +21,30 @@ export async function POST(request) {
 
     let hfResponse;
     try {
-      hfResponse = await fetch(
+      hfResponse = await axios.post(
         "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+        {
+          inputs: prompt || 'beautiful 8k portrait',
+          parameters: { negative_prompt: negativePrompt || 'ugly' },
+        },
         {
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
           },
-          method: "POST",
-          body: JSON.stringify({
-            inputs: prompt || 'beautiful 8k portrait',
-            parameters: { negative_prompt: negativePrompt || 'ugly' },
-          }),
+          responseType: 'arraybuffer',
         }
       );
     } catch (e) {
-      return NextResponse.json({ error: 'Hugging Face Network Error', details: e.message }, { status: 500 });
+      if (e.response) {
+        // Hugging Face rejected it (e.g., loading, invalid token, etc.)
+        const errorString = e.response.data ? e.response.data.toString() : e.message;
+        return NextResponse.json({ error: 'Hugging Face API Rejected Request', details: errorString }, { status: e.response.status });
+      }
+      return NextResponse.json({ error: 'Axios Network Error', details: e.message }, { status: 500 });
     }
 
-    if (!hfResponse.ok) {
-      const errorData = await hfResponse.text();
-      return NextResponse.json({ error: 'Hugging Face API Rejected Request', details: errorData }, { status: hfResponse.status });
-    }
-
-    let imageBuffer;
-    try {
-      const imageBlob = await hfResponse.blob();
-      imageBuffer = await imageBlob.arrayBuffer();
-    } catch (e) {
-      return NextResponse.json({ error: 'Blob Processing Error', details: e.message }, { status: 500 });
-    }
-
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(hfResponse.data, {
       status: 200,
       headers: { 'Content-Type': 'image/jpeg' },
     });
