@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge'; 
-
 export async function POST(request) {
   try {
     let reqBody;
@@ -13,7 +11,10 @@ export async function POST(request) {
 
     const { prompt, negativePrompt } = reqBody;
 
-    const apiKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY;
+    // Trimming the key prevents "fetch failed" errors caused by accidental spaces when copying/pasting
+    const rawKey = process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY || process.env.HUGGING_FACE_API_KEY;
+    const apiKey = (rawKey || '').trim();
+    
     if (!apiKey) {
       return NextResponse.json({ error: 'API Key Missing' }, { status: 500 });
     }
