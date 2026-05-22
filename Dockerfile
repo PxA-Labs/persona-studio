@@ -1,48 +1,12 @@
-FROM node:20-alpine AS base
+FROM python:3.9
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
+WORKDIR /code
 
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY ./requirements.txt /code/requirements.txt
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+
 COPY . .
 
-# Next.js telemetry is disabled
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN npm run build
-
-# Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
-EXPOSE 7860
-ENV PORT 7860
-ENV HOSTNAME "0.0.0.0"
-
-# Hugging face spaces map port 7860 to the container by default
-CMD ["node", "server.js"]
+# Hugging Face Spaces map port 7860 to the container
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
