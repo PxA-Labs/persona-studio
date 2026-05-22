@@ -17,7 +17,9 @@ app.add_middleware(
 )
 
 hf_token = os.environ.get("HUGGING_FACE_API_KEY")
-if not hf_token:
+if hf_token:
+    hf_token = hf_token.strip()
+else:
     print("WARNING: HUGGING_FACE_API_KEY environment variable is not set!")
     
 hf_client = InferenceClient(token=hf_token)
