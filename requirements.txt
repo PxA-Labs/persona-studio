@@ -2,3 +2,4 @@ fastapi
 uvicorn
 huggingface_hub
 Pillow
+gradio_client

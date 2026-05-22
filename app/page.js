@@ -6,8 +6,20 @@ export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('ugly, bad anatomy, deformed, blurry');
   const [seed, setSeed] = useState('');
+  const [faceImage, setFaceImage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState(null);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setFaceImage(reader.result);
+      reader.readAsDataURL(file);
+    } else {
+      setFaceImage(null);
+    }
+  };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -18,6 +30,7 @@ export default function Home() {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://purvansh01-persona-studio.hf.space';
       const bodyPayload = { prompt, negativePrompt };
       if (seed) bodyPayload.seed = parseInt(seed, 10);
+      if (faceImage) bodyPayload.face_image_base64 = faceImage;
       
       const response = await fetch(`${backendUrl}/api/generate`, {
         method: 'POST',
@@ -81,6 +94,25 @@ export default function Home() {
           {/* Controls Panel */}
           <div className="glass-panel">
             <form onSubmit={handleGenerate}>
+              <div style={{ marginBottom: '24px' }}>
+                <label className="input-label">Upload Reference Face (Optional)</label>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileUpload}
+                    className="input-field"
+                    style={{ padding: '8px' }}
+                  />
+                  {faceImage && (
+                    <img src={faceImage} alt="Face Reference" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                  )}
+                </div>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                  Pro Tip: Uploading a face triggers the massive InstantID GPUs. It is incredibly powerful but may take up to 60 seconds.
+                </p>
+              </div>
+
               <div style={{ marginBottom: '24px' }}>
                 <label className="input-label">Positive Prompt</label>
                 <textarea 
