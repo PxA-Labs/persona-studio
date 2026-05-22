@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { Buffer } from 'buffer';
 
-export const maxDuration = 60; // Allow Vercel up to 60 seconds instead of the default 10 seconds!
+export const runtime = 'edge'; 
 
 export async function POST(request) {
   try {
@@ -39,11 +38,12 @@ export async function POST(request) {
     }
 
     const imageBlob = await response.blob();
-    const arrayBuffer = await imageBlob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
-
-    return NextResponse.json({ imageUrl: base64Image });
+    return new NextResponse(imageBlob, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/jpeg',
+      },
+    });
     
   } catch (error) {
     console.error('Generation error:', error);

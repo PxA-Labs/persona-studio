@@ -24,8 +24,9 @@ export default function Home() {
         const errorData = await response.json();
         alert(`Server Error: ${errorData.error}\n\nDetails: ${errorData.details || ''}`);
       } else {
-        const data = await response.json();
-        setGeneratedImage(data.imageUrl);
+        const imageBlob = await response.blob();
+        const imageUrl = URL.createObjectURL(imageBlob);
+        setGeneratedImage(imageUrl);
       }
     } catch (err) {
       alert(`Client Error: ${err.message}`);
